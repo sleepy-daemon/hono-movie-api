@@ -1,0 +1,19 @@
+node_modules
+dist
+coverage
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+*.log
+tmp
+.DS_Store
+
+# tests + docs the running image doesn't need
+**/*.test.ts
+README.md
+userscript
+api
+vercel.json

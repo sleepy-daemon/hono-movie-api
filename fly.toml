@@ -1,0 +1,36 @@
+# Fly.io config. Run `fly launch --copy-config --no-deploy` once to bind
+# an app name, then `fly deploy` to ship.
+# Docs: https://fly.io/docs/reference/configuration/
+
+# Replace with your chosen app name (lowercase, hyphens allowed).
+app = "hono-movie-api"
+
+# Singapore — closest region to the IDLIX upstream mirrors so the stream
+# chain's ~15s unlock gate and redeem round-trips stay snappy.
+primary_region = "sin"
+
+[build]
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Scale to zero when idle; wake on the next request. First request after
+  # a sleep adds ~1-3s cold start.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 50
+    soft_limit = 25
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

@@ -562,25 +562,44 @@ Tokens age out of the pool automatically after ~4.5 minutes (Turnstile tokens li
 
 ## Deployment
 
-### Vercel
+### Fly.io (recommended)
 
-The repository is wired to deploy as a single serverless function out of the box: [`api/[[...route]].ts`](api/%5B%5B...route%5D%5D.ts) wraps the Hono app with `@hono/vercel`, and [`vercel.json`](vercel.json) rewrites every path to it.
+Vercel's Node runtime applies a datacenter TLS fingerprint on top of outbound sockets, which Cloudflare detects and blocks with `403 Attention Required`. `got-scraping`'s whole point is to spoof a Chrome TLS fingerprint, so **this project does not run on Vercel for any Cloudflare-protected upstream**. Fly.io runs vanilla Node with no TLS hijacking and the full chain works.
 
-Steps:
+The repo ships a [`Dockerfile`](Dockerfile) and a [`fly.toml`](fly.toml) ready to go.
 
-1. **Push to GitHub** and import the repo at [vercel.com/new](https://vercel.com/new).
-2. In Vercel project **Settings → Environment Variables**, add:
-   - `BASE_URL` — `https://z3.idlixku.com` (or current upstream mirror)
-   - `TOKEN_POOL_SECRET` — any long random string. Must match the `POOL_SECRET` constant inside [`userscript/idlix-token-forwarder.user.js`](userscript/idlix-token-forwarder.user.js).
-   - `UPSTASH_REDIS_REST_URL` — from [upstash.com](https://upstash.com/) free tier (create a Redis database → copy "REST URL").
-   - `UPSTASH_REDIS_REST_TOKEN` — same page, "REST Token" field.
-3. **Deploy.** The build picks up `api/[[...route]].ts` automatically.
-4. **Update the userscript** with your Vercel URL + the same `TOKEN_POOL_SECRET` and reinstall in Tampermonkey.
-5. Keep an upstream tab open in your browser to keep the pool warm.
+1. **Install** [`flyctl`](https://fly.io/docs/flyctl/install/) and `fly auth signup` (requires a card for verification; free tier is actually free — 3 shared-cpu VMs, 256MB each).
+2. **In the project folder,** run:
+   ```powershell
+   fly launch --copy-config --no-deploy
+   ```
+   Pick an app name (edit `fly.toml`'s `app = "..."` first if you want a specific one). Say **No** to Postgres, **No** to Redis, **Keep** the generated config.
+3. **Set env vars as secrets** (they're encrypted and only exposed to the running app):
+   ```powershell
+   fly secrets set BASE_URL=https://z3.idlixku.com
+   fly secrets set TOKEN_POOL_SECRET=<generate a long random string>
+   fly secrets set UPSTASH_REDIS_REST_URL=<from upstash.com>
+   fly secrets set UPSTASH_REDIS_REST_TOKEN=<from upstash.com>
+   ```
+4. **Deploy:**
+   ```powershell
+   fly deploy
+   ```
+   First build takes ~2 min, subsequent deploys ~30s.
+5. **Verify:**
+   ```powershell
+   fly open                              # opens your app URL in browser
+   curl https://<your-app>.fly.dev/      # 200
+   fly logs                              # tail server logs
+   ```
+6. **Point the userscript** at `https://<your-app>.fly.dev/tokens` with the same `TOKEN_POOL_SECRET`, reinstall in Tampermonkey.
 
-> **Function timeout.** Stream endpoints take ~17–25s on a cold path (upstream has a ~15s unlock gate + claim + redeem). Vercel Hobby allows `maxDuration: 60` since late 2024 and the included `vercel.json` sets that. Catalog endpoints (`/movies`, `/series`, `/browse`, `/search`, `/home`) are sub-second and fit any tier.
+The free tier scales to zero when idle (set in `fly.toml`), so cold starts add ~1-3s after an idle period. Keep an upstream tab open in your browser to keep the pool warm.
 
-> **Upstash is not optional on Vercel.** Each lambda invocation gets a fresh process, so the default in-memory pool is lost between requests. Without the two Upstash env vars set, tokens posted to `/tokens` on one lambda won't be visible to the next, and stream endpoints will always return 503.
+### Vercel (unsupported for this project)
+
+An [`api/index.ts`](api/index.ts) bridge + [`vercel.json`](vercel.json) are in the repo and deploys cleanly, but every upstream request to IDLIX returns `403` due to Vercel's TLS fingerprinting layer. Kept for future use if we ever point at a non-CF-protected source.
+
 
 ### Railway / Fly.io / Render
 
