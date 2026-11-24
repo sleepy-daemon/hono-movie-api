@@ -3,14 +3,14 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 
-import home from './routes/home'
-import movies from './routes/movies'
-import series from './routes/series'
-import search from './routes/search'
-import browse from './routes/browse'
-import leaderboard from './routes/leaderboard'
-import docs from './routes/docs'
-import tokens from './routes/tokens'
+import home from './routes/home.js'
+import movies from './routes/movies.js'
+import series from './routes/series.js'
+import search from './routes/search.js'
+import browse from './routes/browse.js'
+import leaderboard from './routes/leaderboard.js'
+import docs from './routes/docs.js'
+import tokens from './routes/tokens.js'
 
 const app = new Hono()
 

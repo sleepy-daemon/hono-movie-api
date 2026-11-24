@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mapItem, mapDetail } from './mapper'
+import { mapItem, mapDetail } from './mapper.js'
 
 describe('mapItem', () => {
   it('falls back to firstAirDate when releaseDate is empty', () => {

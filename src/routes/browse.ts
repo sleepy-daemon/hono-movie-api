@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
-import { getJson } from '../client'
-import { mapItem } from '../mapper'
-import { isSlug, isYear, parsePage } from '../validate'
-import * as cache from '../cache'
+import { getJson } from '../client.js'
+import { mapItem } from '../mapper.js'
+import { isSlug, isYear, parsePage } from '../validate.js'
+import * as cache from '../cache.js'
 
 const app = new Hono()
 

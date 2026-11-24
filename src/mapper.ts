@@ -1,4 +1,4 @@
-import type { MediaItem, MediaDetail, MediaType, Season } from './types'
+import type { MediaItem, MediaDetail, MediaType, Season } from './types.js'
 
 function extractYear(raw: Record<string, unknown>): number | null {
   const str = (raw.releaseDate || raw.firstAirDate || '') as string

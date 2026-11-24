@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
-import { allSections, findSection, loadHomepage, mapSection } from '../homepage'
+import { allSections, findSection, loadHomepage, mapSection } from '../homepage.js'
 
 const app = new Hono()
 

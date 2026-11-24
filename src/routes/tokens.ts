@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import { pool } from '../tokenPool'
-import { isVerificationToken } from '../validate'
+import { pool } from '../tokenPool.js'
+import { isVerificationToken } from '../validate.js'
 
 const app = new Hono()
 

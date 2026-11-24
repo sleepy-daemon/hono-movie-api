@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
-import { getJson } from '../client'
-import { mapItem } from '../mapper'
-import * as cache from '../cache'
+import { getJson } from '../client.js'
+import { mapItem } from '../mapper.js'
+import * as cache from '../cache.js'
 
 const app = new Hono()
 

@@ -9,8 +9,8 @@ vi.mock('./client', () => ({
   forkCookieJar: vi.fn(),
 }))
 
-import { getJson, postJson, postJsonResult, forkCookieJar } from './client'
-import { getEpisodeStream, getMovieStream, VerificationRequiredError } from './stream'
+import { getJson, postJson, postJsonResult, forkCookieJar } from './client.js'
+import { getEpisodeStream, getMovieStream, VerificationRequiredError } from './stream.js'
 
 const getJsonMock = vi.mocked(getJson)
 const postJsonMock = vi.mocked(postJson)

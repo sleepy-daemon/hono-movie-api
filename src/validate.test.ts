@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isSlug, isVerificationToken, isYear, parsePage, parsePositiveInt, MAX_PAGE } from './validate'
+import { isSlug, isVerificationToken, isYear, parsePage, parsePositiveInt, MAX_PAGE } from './validate.js'
 
 describe('isSlug', () => {
   it.each(['avengers-endgame', 'Movie-2024', 'a', '123'])('accepts %s', v => expect(isSlug(v)).toBe(true))

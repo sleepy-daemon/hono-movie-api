@@ -11,11 +11,11 @@ vi.mock('../stream', async () => {
   }
 })
 
-import tokens from './tokens'
-import movies from './movies'
-import { pool, _resetPool } from '../tokenPool'
-import { getMovieStream, VerificationRequiredError } from '../stream'
-import * as cache from '../cache'
+import tokens from './tokens.js'
+import movies from './movies.js'
+import { pool, _resetPool } from '../tokenPool.js'
+import { getMovieStream, VerificationRequiredError } from '../stream.js'
+import * as cache from '../cache.js'
 
 const app = new Hono().route('/tokens', tokens).route('/movies', movies)
 

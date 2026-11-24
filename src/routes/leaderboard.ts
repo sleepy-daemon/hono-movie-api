@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
-import { getJson } from '../client'
-import { mapItem } from '../mapper'
-import type { MediaItem } from '../types'
-import * as cache from '../cache'
+import { getJson } from '../client.js'
+import { mapItem } from '../mapper.js'
+import type { MediaItem } from '../types.js'
+import * as cache from '../cache.js'
 
 const app = new Hono()
 

@@ -4,7 +4,7 @@ const gotMock = vi.fn()
 vi.mock('got-scraping', () => ({ gotScraping: gotMock }))
 
 import { CookieJar } from 'tough-cookie'
-import { request, getJson, postJson, postJsonResult, forkCookieJar } from './client'
+import { request, getJson, postJson, postJsonResult, forkCookieJar } from './client.js'
 
 let errSpy: ReturnType<typeof vi.spyOn>
 

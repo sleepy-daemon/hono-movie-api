@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { pool, _resetPool } from './tokenPool'
+import { pool, _resetPool } from './tokenPool.js'
 
 describe('token pool (in-memory backend)', () => {
   beforeEach(() => {

@@ -1,9 +1,9 @@
 import type { Context } from 'hono'
-import { VerificationRequiredError, type StreamOptions, type VerificationDetails } from './stream'
-import type { StreamResult } from './types'
-import { isVerificationToken } from './validate'
-import { pool } from './tokenPool'
-import * as cache from './cache'
+import { VerificationRequiredError, type StreamOptions, type VerificationDetails } from './stream.js'
+import type { StreamResult } from './types.js'
+import { isVerificationToken } from './validate.js'
+import { pool } from './tokenPool.js'
+import * as cache from './cache.js'
 
 const STREAM_TTL_HOURS = 0.25 // stream URLs expire upstream
 // Cache upstream failures for 5 minutes so a repeatedly broken source doesn't

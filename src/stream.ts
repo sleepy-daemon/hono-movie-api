@@ -1,5 +1,5 @@
-import { getJson, postJson, postJsonResult, forkCookieJar, requestUrl, BASE_URL } from './client'
-import type { StreamResult } from './types'
+import { getJson, postJson, postJsonResult, forkCookieJar, requestUrl, BASE_URL } from './client.js'
+import type { StreamResult } from './types.js'
 
 const UA = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36'
 

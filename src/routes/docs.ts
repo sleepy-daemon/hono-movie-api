@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { swaggerUI } from '@hono/swagger-ui'
-import { openapi } from '../openapi'
+import { openapi } from '../openapi.js'
 
 const app = new Hono()
 

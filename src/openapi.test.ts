@@ -3,14 +3,14 @@ import { Hono } from 'hono'
 
 vi.mock('./client', () => ({ BASE_URL: 'https://upstream.test', getJson: vi.fn(), postJson: vi.fn() }))
 
-import { openapi } from './openapi'
-import docs from './routes/docs'
-import home from './routes/home'
-import movies from './routes/movies'
-import series from './routes/series'
-import search from './routes/search'
-import browse from './routes/browse'
-import leaderboard from './routes/leaderboard'
+import { openapi } from './openapi.js'
+import docs from './routes/docs.js'
+import home from './routes/home.js'
+import movies from './routes/movies.js'
+import series from './routes/series.js'
+import search from './routes/search.js'
+import browse from './routes/browse.js'
+import leaderboard from './routes/leaderboard.js'
 
 // Mirrors the mounting in index.ts (which can't be imported: it starts the server).
 const app = new Hono()

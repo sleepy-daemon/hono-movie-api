@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
-import { getJson } from '../client'
-import { mapItem, mapDetail } from '../mapper'
-import { getEpisodeStream } from '../stream'
-import { isSlug, parsePage, parsePositiveInt } from '../validate'
-import { findSection, loadHomepage, mapSection } from '../homepage'
-import { streamResponse } from '../streamResponse'
-import type { MediaDetail } from '../types'
-import * as cache from '../cache'
+import { getJson } from '../client.js'
+import { mapItem, mapDetail } from '../mapper.js'
+import { getEpisodeStream } from '../stream.js'
+import { isSlug, parsePage, parsePositiveInt } from '../validate.js'
+import { findSection, loadHomepage, mapSection } from '../homepage.js'
+import { streamResponse } from '../streamResponse.js'
+import type { MediaDetail } from '../types.js'
+import * as cache from '../cache.js'
 
 const app = new Hono()
 

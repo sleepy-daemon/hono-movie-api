@@ -8,15 +8,15 @@ vi.mock('../stream', async importOriginal => ({
   getEpisodeStream: vi.fn(),
 }))
 
-import { getJson } from '../client'
-import { getEpisodeStream, getMovieStream, VerificationRequiredError } from '../stream'
-import home from './home'
-import leaderboard from './leaderboard'
-import * as cache from '../cache'
-import movies from './movies'
-import series from './series'
-import search from './search'
-import browse from './browse'
+import { getJson } from '../client.js'
+import { getEpisodeStream, getMovieStream, VerificationRequiredError } from '../stream.js'
+import home from './home.js'
+import leaderboard from './leaderboard.js'
+import * as cache from '../cache.js'
+import movies from './movies.js'
+import series from './series.js'
+import search from './search.js'
+import browse from './browse.js'
 
 const getJsonMock = vi.mocked(getJson)
 const app = new Hono()

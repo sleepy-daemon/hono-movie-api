@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import * as cache from './cache'
+import * as cache from './cache.js'
 
 afterEach(() => vi.useRealTimers())
 
