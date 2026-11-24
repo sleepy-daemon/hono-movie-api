@@ -1,23 +1,18 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-slim AS base
+FROM node:20-slim
 WORKDIR /app
+
 ENV NODE_ENV=production
-# Fly.io's default internal port. Our app reads PORT from env.
+# Fly's default internal port. src/index.ts reads PORT from env.
 ENV PORT=8080
 
-# ─── Install production deps ──────────────────────────────────────────────
-FROM base AS deps
+# Install prod deps plus tsx so we can run the TypeScript sources directly.
+# Simpler than a separate build step; image stays ~180 MB.
 COPY package.json package-lock.json ./
-# Install tsx too so we can run the TypeScript sources directly at runtime.
-# Simpler than a build step and the image stays small (~160 MB).
-RUN npm ci --omit=dev && npm install tsx --no-save
+RUN npm ci --omit=dev && npm install --no-save tsx
 
-# ─── Final image ──────────────────────────────────────────────────────────
-FROM base
-COPY --from=deps /app/node_modules /app/node_modules
-COPY package.json ./
 COPY src ./src
 
 EXPOSE 8080
-CMD ["node", "--import", "tsx", "src/index.ts"]
+CMD ["npx", "tsx", "src/index.ts"]
