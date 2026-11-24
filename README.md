@@ -564,18 +564,23 @@ Tokens age out of the pool automatically after ~4.5 minutes (Turnstile tokens li
 
 ### Vercel
 
-Add a `vercel.json` to the project root:
+The repository is wired to deploy as a single serverless function out of the box: [`api/[[...route]].ts`](api/%5B%5B...route%5D%5D.ts) wraps the Hono app with `@hono/vercel`, and [`vercel.json`](vercel.json) rewrites every path to it.
 
-```json
-{
-  "builds": [{ "src": "src/index.ts", "use": "@vercel/node" }],
-  "routes": [{ "src": "/(.*)", "dest": "src/index.ts" }]
-}
-```
+Steps:
 
-Set the `BASE_URL` environment variable in your Vercel project settings.
+1. **Push to GitHub** and import the repo at [vercel.com/new](https://vercel.com/new).
+2. In Vercel project **Settings → Environment Variables**, add:
+   - `BASE_URL` — `https://z3.idlixku.com` (or current upstream mirror)
+   - `TOKEN_POOL_SECRET` — any long random string. Must match the `POOL_SECRET` constant inside [`userscript/idlix-token-forwarder.user.js`](userscript/idlix-token-forwarder.user.js).
+   - `UPSTASH_REDIS_REST_URL` — from [upstash.com](https://upstash.com/) free tier (create a Redis database → copy "REST URL").
+   - `UPSTASH_REDIS_REST_TOKEN` — same page, "REST Token" field.
+3. **Deploy.** The build picks up `api/[[...route]].ts` automatically.
+4. **Update the userscript** with your Vercel URL + the same `TOKEN_POOL_SECRET` and reinstall in Tampermonkey.
+5. Keep an upstream tab open in your browser to keep the pool warm.
 
-> **Note:** Vercel's free tier has a 10-second function timeout. Stream endpoints take 15–30 seconds on first call. Upgrade to Pro (60s timeout) or use a persistent host (Railway, Fly.io) for stream endpoints.
+> **Function timeout.** Stream endpoints take ~17–25s on a cold path (upstream has a ~15s unlock gate + claim + redeem). Vercel Hobby allows `maxDuration: 60` since late 2024 and the included `vercel.json` sets that. Catalog endpoints (`/movies`, `/series`, `/browse`, `/search`, `/home`) are sub-second and fit any tier.
+
+> **Upstash is not optional on Vercel.** Each lambda invocation gets a fresh process, so the default in-memory pool is lost between requests. Without the two Upstash env vars set, tokens posted to `/tokens` on one lambda won't be visible to the next, and stream endpoints will always return 503.
 
 ### Railway / Fly.io / Render
 
