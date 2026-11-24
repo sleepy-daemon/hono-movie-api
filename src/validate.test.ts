@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isSlug, isYear, parsePage, parsePositiveInt, MAX_PAGE } from './validate'
+import { isSlug, isVerificationToken, isYear, parsePage, parsePositiveInt, MAX_PAGE } from './validate'
 
 describe('isSlug', () => {
   it.each(['avengers-endgame', 'Movie-2024', 'a', '123'])('accepts %s', v => expect(isSlug(v)).toBe(true))
@@ -35,4 +35,11 @@ describe('parsePage', () => {
     expect(parsePage(String(MAX_PAGE + 1))).toBeNull()
   })
   it('accepts the max page', () => expect(parsePage(String(MAX_PAGE))).toBe(MAX_PAGE))
+})
+
+describe('isVerificationToken', () => {
+  it.each(['0.abc_DEF-123.xyz', 'a', 'x'.repeat(2048)])('accepts %s', v => expect(isVerificationToken(v)).toBe(true))
+  it.each([undefined, '', 'has space', 'line\nbreak', 'x'.repeat(2049), 'quote"'])(
+    'rejects %j', v => expect(isVerificationToken(v)).toBe(false)
+  )
 })

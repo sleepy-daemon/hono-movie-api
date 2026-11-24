@@ -1,11 +1,16 @@
+export type MediaType = 'movie' | 'series' | 'episode'
+
 export interface MediaItem {
   title: string
   year: number | null
-  type: 'movie' | 'series'
+  type: MediaType
   quality: string | null
   rating: number | null
   poster: string | null
   slug: string | null
+  /** Episode items only: the series slug is in `slug`. */
+  season?: number | null
+  episode?: number | null
 }
 
 export interface MediaDetail extends MediaItem {

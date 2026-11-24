@@ -1,4 +1,4 @@
-import type { MediaItem, MediaDetail, Season } from './types'
+import type { MediaItem, MediaDetail, MediaType, Season } from './types'
 
 function extractYear(raw: Record<string, unknown>): number | null {
   const str = (raw.releaseDate || raw.firstAirDate || '') as string
@@ -16,12 +16,50 @@ function tmdb(path: string | null | undefined, size: string): string | null {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : null
 }
 
-export function mapItem(raw: Record<string, unknown>): MediaItem | null {
+const CONTENT_TYPES: Record<string, MediaType> = {
+  movie: 'movie',
+  series: 'series',
+  tv_series: 'series',
+  episode: 'episode',
+}
+
+/**
+ * @param fallbackType - used when upstream omits `contentType` (e.g. /api/series
+ *   list items), so callers that know what they fetched can say so.
+ */
+export function mapItem(raw: Record<string, unknown>, fallbackType: MediaType = 'movie'): MediaItem | null {
   if (!raw) return null
+
+  // Homepage "Featured" entries wrap the title: { contentType, content: {...} }.
+  const content = raw.content as Record<string, unknown> | undefined
+  if (content && typeof content === 'object') {
+    return mapItem({ ...content, contentType: raw.contentType ?? content.contentType }, fallbackType)
+  }
+
+  const type = CONTENT_TYPES[raw.contentType as string] ?? fallbackType
+
+  // Episode entries describe the episode and nest their series; expose the series
+  // slug plus season/episode so clients can hit the episode stream route.
+  if (type === 'episode') {
+    const series = (raw.series ?? {}) as Record<string, unknown>
+    const season = (raw.season ?? {}) as Record<string, unknown>
+    return {
+      title: (series.title as string) || (raw.name as string) || '',
+      year: extractYear(series),
+      type,
+      quality: (raw.quality as string) ?? null,
+      rating: parseRating(raw.voteAverage),
+      poster: tmdb(series.posterPath as string, 'w300'),
+      slug: (series.slug as string) ?? null,
+      season: typeof season.seasonNumber === 'number' ? season.seasonNumber : null,
+      episode: typeof raw.episodeNumber === 'number' ? raw.episodeNumber : null,
+    }
+  }
+
   return {
     title: (raw.title as string) || '',
     year: extractYear(raw),
-    type: raw.contentType === 'series' ? 'series' : 'movie',
+    type,
     quality: (raw.quality as string) ?? null,
     rating: parseRating(raw.voteAverage),
     poster: tmdb(raw.posterPath as string, 'w300'),

@@ -45,6 +45,39 @@ app.get('/years', async c => {
   return c.json({ success: true, data: items })
 })
 
+app.get('/networks', async c => {
+  const cached = cache.get('networks')
+  if (cached) return c.json({ success: true, data: cached })
+
+  const data = await getJson<{ data: { label: string; slug: string }[] }>('/api/browse/networks')
+  if (!data) return upstreamError(c)
+
+  const items = (data.data ?? []).map(n => ({ name: n.label, slug: n.slug }))
+  cache.set('networks', items, 24)
+  return c.json({ success: true, data: items })
+})
+
+// Upstream ignores `network` on /api/movies and /api/series; only /api/browse
+// filters by it, and that endpoint returns movies and series mixed together.
+app.get('/network/:slug', async c => {
+  const slug = c.req.param('slug')
+  if (!isSlug(slug)) return c.json({ success: false, message: 'Invalid network' }, 400)
+  const page = parsePage(c.req.query('page'))
+  if (page === null) return c.json({ success: false, message: 'Invalid page' }, 400)
+
+  const key = `network.${slug}.${page}`
+  const cached = cache.get(key)
+  if (cached) return c.json({ success: true, data: cached })
+
+  const qs = new URLSearchParams({ network: slug, page: String(page), limit: '36' })
+  const data = await getJson<{ data: unknown[] }>(`/api/browse?${qs}`)
+  if (!data) return upstreamError(c)
+
+  const items = (data.data ?? []).map(r => mapItem(r as Record<string, unknown>)).filter(Boolean)
+  cache.set(key, items, 1)
+  return c.json({ success: true, data: items })
+})
+
 /** Shared handler for filtered listings: /genre/:slug, /country/:code, /year/:year. */
 async function filtered(c: Context, filter: 'genre' | 'country' | 'year', value: string) {
   const type = c.req.query('type') === 'series' ? 'series' : 'movie'

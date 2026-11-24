@@ -20,6 +20,51 @@ describe('mapItem', () => {
   })
 })
 
+describe('mapItem content types', () => {
+  it.each([
+    ['movie', 'movie'],
+    ['series', 'series'],
+    ['tv_series', 'series'],
+    ['episode', 'episode'],
+  ])('maps contentType %s to %s', (contentType, type) => {
+    expect(mapItem({ contentType })?.type).toBe(type)
+  })
+
+  it('uses the fallback type when contentType is missing or unknown', () => {
+    expect(mapItem({})?.type).toBe('movie')
+    expect(mapItem({}, 'series')?.type).toBe('series')
+    expect(mapItem({ contentType: 'weird' }, 'series')?.type).toBe('series')
+  })
+})
+
+describe('mapItem homepage shapes', () => {
+  it('unwraps featured entries', () => {
+    const item = mapItem({ contentType: 'tv_series', title: null, content: { title: 'Show', slug: 'show', firstAirDate: '2024-01-01' } })
+    expect(item).toMatchObject({ title: 'Show', slug: 'show', type: 'series', year: 2024 })
+  })
+
+  it('maps episode entries to their series slug plus season/episode', () => {
+    const item = mapItem({
+      contentType: 'episode',
+      name: 'Episode 12',
+      episodeNumber: 12,
+      season: { seasonNumber: 1 },
+      series: { title: 'Love', slug: 'love-2026', posterPath: '/p.jpg', firstAirDate: '2026-10-19' },
+    })
+    expect(item).toEqual({
+      title: 'Love',
+      year: 2026,
+      type: 'episode',
+      quality: null,
+      rating: null,
+      poster: 'https://image.tmdb.org/t/p/w300/p.jpg',
+      slug: 'love-2026',
+      season: 1,
+      episode: 12,
+    })
+  })
+})
+
 describe('mapDetail', () => {
   it('includes the MediaItem fields quality, rating and slug', () => {
     const d = mapDetail({ title: 'X', slug: 'x', quality: 'HD', voteAverage: '7.5' })

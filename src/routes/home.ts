@@ -1,40 +1,53 @@
 import { Hono } from 'hono'
-import { getJson } from '../client'
-import { mapItem } from '../mapper'
-import * as cache from '../cache'
+import type { Context } from 'hono'
+import { allSections, findSection, loadHomepage, mapSection } from '../homepage'
 
 const app = new Hono()
+
+const upstreamError = (c: Context) => c.json({ success: false, message: 'Upstream error' }, 502)
+
+// Section titles on the upstream homepage, matched case-insensitively.
+const RECENT_SECTIONS = {
+  movie: 'recently added movies',
+  series: 'recently added series',
+  episode: 'recently added episodes',
+} as const
 
 app.get('/', c => c.json({ success: true, message: 'Movie API', version: '1.0.0' }))
 
 app.get('/home', async c => {
-  const cached = cache.get<ReturnType<typeof mapItem>[]>('home')
-  if (cached) return c.json({ success: true, data: cached })
-
-  const data = await getJson<{ above?: { data: unknown[] }[]; below?: { data: unknown[] }[] }>('/api/homepage')
-  if (!data) return c.json({ success: false, message: 'Upstream error' }, 502)
-
-  const all = [...(data.above ?? []), ...(data.below ?? [])]
-  const items = all.flatMap(s => (s.data ?? []).map(r => mapItem(r as Record<string, unknown>))).filter(Boolean)
-  cache.set('home', items, 1)
-  return c.json({ success: true, data: items })
+  const home = await loadHomepage()
+  if (!home) return upstreamError(c)
+  return c.json({ success: true, data: allSections(home).flatMap(mapSection) })
 })
 
 app.get('/home/sections', async c => {
-  const cached = cache.get<Record<string, unknown[]>>('home.sections')
-  if (cached) return c.json({ success: true, data: cached })
-
-  const data = await getJson<{ above?: { title?: string; data: unknown[] }[]; below?: { title?: string; data: unknown[] }[] }>('/api/homepage')
-  if (!data) return c.json({ success: false, message: 'Upstream error' }, 502)
+  const home = await loadHomepage()
+  if (!home) return upstreamError(c)
 
   const sections: Record<string, unknown[]> = {}
-  for (const s of [...(data.above ?? []), ...(data.below ?? [])]) {
+  for (const s of allSections(home)) {
     if (!s.title) continue
-    const items = (s.data ?? []).map(r => mapItem(r as Record<string, unknown>)).filter(Boolean)
+    const items = mapSection(s)
     if (items.length) sections[s.title] = items
   }
-  cache.set('home.sections', sections, 1)
   return c.json({ success: true, data: sections })
+})
+
+app.get('/home/featured', async c => {
+  const home = await loadHomepage()
+  if (!home) return upstreamError(c)
+  return c.json({ success: true, data: mapSection(findSection(home, 'featured')) })
+})
+
+app.get('/home/recent', async c => {
+  const type = c.req.query('type') ?? 'movie'
+  if (!Object.hasOwn(RECENT_SECTIONS, type)) return c.json({ success: false, message: 'Invalid type' }, 400)
+
+  const home = await loadHomepage()
+  if (!home) return upstreamError(c)
+  const title = RECENT_SECTIONS[type as keyof typeof RECENT_SECTIONS]
+  return c.json({ success: true, data: mapSection(findSection(home, title)) })
 })
 
 export default app

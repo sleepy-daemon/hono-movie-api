@@ -4,6 +4,7 @@ import { mapItem, mapDetail } from '../mapper'
 import { getMovieStream } from '../stream'
 import { isSlug, parsePage } from '../validate'
 import * as cache from '../cache'
+import { streamResponse } from '../streamResponse'
 
 const app = new Hono()
 
@@ -49,19 +50,10 @@ app.get('/:slug', async c => {
   return c.json({ success: true, data: detail })
 })
 
-app.get('/:slug/stream', async c => {
+app.get('/:slug/stream', c => {
   const slug = c.req.param('slug')
   if (!isSlug(slug)) return c.json({ success: false, message: 'Invalid slug' }, 400)
-
-  const key = `movie.stream.${slug}`
-  const cached = cache.get(key)
-  if (cached) return c.json({ success: true, data: cached })
-
-  const result = await getMovieStream(slug)
-  if (!result.streamUrl) return c.json({ success: false, message: 'Stream unavailable' }, 502)
-
-  cache.set(key, result, 0.25)
-  return c.json({ success: true, data: result })
+  return streamResponse(c, `movie.stream.${slug}`, opts => getMovieStream(slug, opts))
 })
 
 export default app

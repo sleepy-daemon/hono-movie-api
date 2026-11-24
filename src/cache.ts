@@ -25,6 +25,11 @@ export function get<T>(key: string): T | null {
   return entry.value
 }
 
+/** Drop every entry. Used by tests to isolate cases that share fixed keys. */
+export function clear(): void {
+  store.clear()
+}
+
 function sweep(): void {
   const now = Date.now()
   for (const [key, entry] of store) if (now > entry.expiresAt) store.delete(key)

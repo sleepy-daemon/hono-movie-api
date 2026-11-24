@@ -1,9 +1,12 @@
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,199}$/i
 const YEAR_RE = /^\d{4}$/
+// Turnstile tokens are opaque and at most 2048 chars; allow only printable non-space ASCII minus quotes.
+const VERIFICATION_TOKEN_RE = /^[!#-~]{1,2048}$/
 export const MAX_PAGE = 500
 
 export const isSlug = (v: string | undefined): v is string => !!v && SLUG_RE.test(v)
 export const isYear = (v: string | undefined): v is string => !!v && YEAR_RE.test(v)
+export const isVerificationToken = (v: string | undefined): v is string => !!v && VERIFICATION_TOKEN_RE.test(v)
 
 /** Positive integer in [1, max], or null if invalid. */
 export function parsePositiveInt(v: string | undefined, max = Number.MAX_SAFE_INTEGER): number | null {
