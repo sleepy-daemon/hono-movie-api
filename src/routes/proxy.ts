@@ -101,7 +101,10 @@ proxy.get('/proxy', async (c) => {
     })
   }
 
-  return new Response(upstream.body, {
+  // Buffer<ArrayBufferLike> isn't accepted as BodyInit by newer DOM types;
+  // copying into a fresh Uint8Array normalizes the underlying buffer type.
+  const body = Uint8Array.from(upstream.body)
+  return new Response(body, {
     status: 200,
     headers: {
       'content-type': contentType,

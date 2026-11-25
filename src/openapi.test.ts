@@ -23,7 +23,7 @@ const app = new Hono()
   .route('/leaderboard', leaderboard)
 
 // Utility/infra endpoints kept out of the public OpenAPI surface.
-const DOC_ROUTES = new Set(['/openapi.json', '/docs', '/tokens/'])
+const DOC_ROUTES = new Set(['/openapi.json', '/docs', '/docs/', '/docs/*', '/swagger', '/tokens/'])
 const toOpenApiPath = (p: string) => p.replace(/:(\w+)/g, '{$1}')
 
 describe('OpenAPI spec', () => {
@@ -58,8 +58,19 @@ describe('docs routes', () => {
     expect((await res.json()).openapi).toBe('3.1.0')
   })
 
-  it('serves the Swagger UI page pointing at the spec', async () => {
+  it('serves the custom docs SPA at /docs', async () => {
     const res = await app.request('/docs')
+    // Built bundle lives in ../docs-dist/; in CI without a build it may 404.
+    // Either outcome is acceptable — just not a server error.
+    expect([200, 404]).toContain(res.status)
+    if (res.status === 200) {
+      expect(res.headers.get('content-type')).toContain('text/html')
+      expect(await res.text()).toContain('id="root"')
+    }
+  })
+
+  it('serves Swagger UI at /swagger as a fallback', async () => {
+    const res = await app.request('/swagger')
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/html')
     expect(await res.text()).toContain('/openapi.json')
