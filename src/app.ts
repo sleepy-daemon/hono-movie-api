@@ -11,6 +11,8 @@ import browse from './routes/browse.js'
 import leaderboard from './routes/leaderboard.js'
 import docs from './routes/docs.js'
 import tokens from './routes/tokens.js'
+import proxy from './routes/proxy.js'
+import player from './routes/player.js'
 
 const app = new Hono()
 
@@ -25,6 +27,8 @@ app.route('/search', search)
 app.route('/browse', browse)
 app.route('/leaderboard', leaderboard)
 app.route('/tokens', tokens)
+app.route('/stream', proxy)
+app.route('/', player)
 
 app.notFound(c => c.json({ success: false, message: 'Not found' }, 404))
 app.onError((err, c) => {

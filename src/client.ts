@@ -72,6 +72,53 @@ export async function requestUrl(
   }
 }
 
+export type RawResult = {
+  status: number
+  ok: boolean
+  body: Buffer
+  headers: Record<string, string | string[] | undefined>
+}
+
+/**
+ * Like requestUrl(), but returns raw bytes and upstream headers — needed for
+ * proxying binary responses (HLS segments, subtitle blobs) without stringifying.
+ */
+export async function requestRaw(
+  url: string,
+  options: { method?: string; body?: string | Buffer; headers?: Record<string, string> } & RequestOptions = {},
+  logLabel: string = url
+): Promise<RawResult> {
+  try {
+    const got = await getGot()
+    const res = await got({
+      url,
+      method: (options.method ?? 'GET') as 'GET' | 'POST',
+      body: options.body as string | Buffer | undefined,
+      headers: { ...BASE_HEADERS, ...options.headers },
+      cookieJar: options.cookieJar ?? sharedJar,
+      http2: true,
+      followRedirect: true,
+      timeout: { request: 60_000 },
+      retry: { limit: 1 },
+      responseType: 'buffer',
+    })
+    const ok = res.statusCode < 400
+    if (!ok) {
+      console.error(`[client] ${options.method ?? 'GET'} ${logLabel}: HTTP ${res.statusCode}`)
+    }
+    return {
+      status: res.statusCode,
+      ok,
+      body: res.body as Buffer,
+      headers: res.headers as Record<string, string | string[] | undefined>,
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[client] ${options.method ?? 'GET'} ${logLabel}:`, msg)
+    return { status: 0, ok: false, body: Buffer.from(msg), headers: {} }
+  }
+}
+
 export async function getJson<T = unknown>(path: string, opts: RequestOptions = {}): Promise<T | null> {
   const res = await request(path, { ...opts, headers: { accept: 'application/json' } })
   if (!res.ok) return null
