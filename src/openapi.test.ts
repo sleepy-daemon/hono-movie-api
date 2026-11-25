@@ -23,7 +23,13 @@ const app = new Hono()
   .route('/leaderboard', leaderboard)
 
 // Utility/infra endpoints kept out of the public OpenAPI surface.
-const DOC_ROUTES = new Set(['/openapi.json', '/docs', '/docs/', '/docs/*', '/swagger', '/tokens/'])
+const DOC_ROUTES = new Set([
+  '/openapi.json',
+  '/docs', '/docs/', '/docs/*',
+  '/swagger',
+  '/tokens/', '/tokens/wait', '/tokens/needs',
+  '/health/',
+])
 const toOpenApiPath = (p: string) => p.replace(/:(\w+)/g, '{$1}')
 
 describe('OpenAPI spec', () => {

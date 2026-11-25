@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { pool } from '../tokenPool.js'
-import { tokenEvents } from '../tokenEvents.js'
+import { waitForNeed } from '../tokenEvents.js'
 import { isVerificationToken } from '../validate.js'
 
 const app = new Hono()
@@ -40,12 +40,16 @@ app.get('/', async c => {
  * The main consumer is the Tampermonkey userscript — IDLIX serves a strict
  * Content-Security-Policy that blocks cross-origin EventSource, but
  * GM_xmlhttpRequest bypasses CSP entirely. Semantically identical to the SSE
- * channel: holds the request open until either a `need` event fires (returns
+ * channel: holds the request open until either a `need` signal fires (returns
  * 200 with { event: 'need' }) or the timeout elapses (returns 204 empty).
  * Client reconnects immediately and loops.
  *
  * Query: ?timeout=<seconds> (1-55, default 25). Keep under Fly's 60s idle
  * limit and your platform's proxy timeout.
+ *
+ * Uses the shared FIFO waiter queue from tokenEvents, so one signalNeed()
+ * wakes exactly one waiter (either this long-poll or an SSE subscriber,
+ * whichever is at the head of the queue).
  */
 app.get('/wait', c => {
   const requested = Number(c.req.query('timeout') ?? '25')
@@ -57,15 +61,14 @@ app.get('/wait', c => {
       if (done) return
       done = true
       clearTimeout(timer)
-      tokenEvents.off('need', onNeed)
+      unregister()
       c.req.raw.signal.removeEventListener('abort', onAbort)
       resolve(res)
     }
-    const onNeed = () => finish(c.json({ event: 'need', ts: Date.now() }))
+    const unregister = waitForNeed(() => finish(c.json({ event: 'need', ts: Date.now() })))
     // Client disconnect — response is thrown away, just unregister listeners.
     const onAbort = () => finish(c.body(null, 204))
     const timer = setTimeout(() => finish(c.body(null, 204)), timeout)
-    tokenEvents.on('need', onNeed)
     c.req.raw.signal.addEventListener('abort', onAbort)
   })
 })
@@ -76,17 +79,33 @@ app.get('/wait', c => {
  * curl, server-to-server, any origin without a CSP wall). The userscript
  * uses /wait instead because IDLIX's CSP blocks EventSource.
  *
+ * Also uses the shared FIFO waiter queue. Re-registers after each `need`
+ * event so the SSE connection can serve multiple events over its lifetime
+ * without becoming a broadcast channel.
+ *
  * - `hello` on connect so the client knows the pipe is live.
  * - `ping` every 25s so proxies (Cloudflare, nginx) don't close the stream.
- * - Listener detached on disconnect to avoid memory leaks.
+ * - Waiter unregistered on disconnect to avoid leaking entries in the queue.
  */
 app.get('/needs', c => {
   return streamSSE(c, async stream => {
-    const onNeed = async () => {
-      try { await stream.writeSSE({ event: 'need', data: String(Date.now()) }) } catch { /* client gone */ }
+    // Ref object avoids the TS narrowing that happens when you reassign a
+    // let-binding from inside an async closure — otherwise the compiler
+    // thinks the variable is forever null at the use site.
+    const unreg: { fn: (() => void) | null } = { fn: null }
+
+    const register = () => {
+      unreg.fn = waitForNeed(async () => {
+        unreg.fn = null
+        try {
+          await stream.writeSSE({ event: 'need', data: String(Date.now()) })
+          if (!stream.closed) register()
+        } catch { /* client gone, abort handler will cleanup */ }
+      })
     }
-    tokenEvents.on('need', onNeed)
-    stream.onAbort(() => { tokenEvents.off('need', onNeed) })
+
+    register()
+    stream.onAbort(() => { unreg.fn?.() })
 
     await stream.writeSSE({ event: 'hello', data: '1', retry: 5_000 })
 
@@ -97,7 +116,7 @@ app.get('/needs', c => {
         await stream.writeSSE({ event: 'ping', data: String(Date.now()) })
       }
     } finally {
-      tokenEvents.off('need', onNeed)
+      unreg.fn?.()
     }
   })
 })

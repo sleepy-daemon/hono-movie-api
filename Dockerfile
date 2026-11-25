@@ -18,12 +18,15 @@ ENV NODE_ENV=production
 # Fly's default internal port. src/index.ts reads PORT from env.
 ENV PORT=8080
 
-# Prod deps only, plus tsx to run the TypeScript sources directly.
+# Prod deps plus tsx installed GLOBALLY. The previous `npm install --no-save tsx`
+# landed tsx in node_modules but npx couldn't resolve it at runtime (bug or
+# NODE_ENV=production quirk), so it re-downloaded tsx on every cold start —
+# ~3 extra seconds per wake. Global install puts the binary on PATH directly.
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --legacy-peer-deps && npm install --no-save tsx
+RUN npm ci --omit=dev --legacy-peer-deps && npm install -g tsx@4.19.2
 
 COPY src ./src
 COPY --from=docs-build /app/docs-dist ./docs-dist
 
 EXPOSE 8080
-CMD ["npx", "tsx", "src/index.ts"]
+CMD ["tsx", "src/index.ts"]

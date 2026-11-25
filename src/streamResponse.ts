@@ -3,7 +3,7 @@ import { VerificationRequiredError, type StreamOptions, type VerificationDetails
 import type { StreamResult } from './types.js'
 import { isVerificationToken } from './validate.js'
 import { pool } from './tokenPool.js'
-import { tokenEvents } from './tokenEvents.js'
+import { signalNeed } from './tokenEvents.js'
 import * as cache from './cache.js'
 
 const STREAM_TTL_HOURS = 0.25 // stream URLs expire upstream
@@ -57,8 +57,8 @@ export async function streamResponse(
     const popped = await pool().pop()
     if (popped) {
       token = popped
-      // Signal subscribed userscripts to mint a replacement. See tokenEvents.
-      tokenEvents.emit('need')
+      // Wake one subscribed userscript to mint a replacement. See tokenEvents.
+      signalNeed()
     }
   }
   let poolAttempts = 0
@@ -88,7 +88,7 @@ export async function streamResponse(
         const next = await pool().pop()
         if (next) {
           token = next
-          tokenEvents.emit('need')
+          signalNeed()
           poolAttempts++
           continue
         }
@@ -96,7 +96,7 @@ export async function streamResponse(
 
       // Pool was empty when we needed a token — nudge subscribers to mint one
       // so the next caller (likely retrying this same slug) finds it warm.
-      if (!fromCaller && !token) tokenEvents.emit('need')
+      if (!fromCaller && !token) signalNeed()
 
       // Preemptive bail (no token to offer) or exhausted pool retries.
       console.warn(`[stream] ${key}: ${err.message}`)
