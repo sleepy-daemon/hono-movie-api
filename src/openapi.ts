@@ -109,8 +109,10 @@ export const openapi = {
     title: 'Movie API',
     version: '1.0.0',
     description:
-      'REST API for browsing movies and TV series. Responses use the envelope `{ success, data }` ' +
-      'on success and `{ success: false, message }` on error.',
+      'REST API for browsing movies and TV series, plus a full stream resolution chain. ' +
+      'Responses use the envelope `{ success, data }` on success and `{ success: false, message }` on error. ' +
+      'Stream endpoints run a six-step upstream chain and may return 503 with a Turnstile challenge — ' +
+      'see the token pool section in the project README.',
   },
   tags: [
     { name: 'Home' },

@@ -4,11 +4,11 @@
  *
  * Backend is pluggable:
  *   - In-memory (default): a FIFO queue in this process. Fine for local dev
- *     and single-instance deployments. Lost on cold start — Vercel lambdas
- *     will not share tokens across instances.
+ *     and single-machine deployments. Lost on restart; not shared across
+ *     multiple Fly machines or horizontally-scaled instances.
  *   - Upstash Redis (when UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
- *     are set): a Redis list via Upstash's HTTP REST API. Vercel-friendly,
- *     free tier, shared across every lambda instance.
+ *     are set): a Redis list via Upstash's HTTP REST API. Survives restarts,
+ *     shared across every machine, free tier covers the workload easily.
  */
 
 const MAX_IN_MEMORY = 50

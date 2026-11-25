@@ -313,7 +313,7 @@ Scale-to-zero is on by default (`min_machines_running = 0`). First request after
 
 ### Vercel (not supported)
 
-[`api/index.ts`](api/index.ts) + [`vercel.json`](vercel.json) are kept in the repo as an archived attempt. Vercel's Node runtime applies a datacenter TLS fingerprint on top of outbound sockets that Cloudflare detects and blocks with `403 Attention Required`. This defeats `got-scraping`'s whole purpose. **Deploys cleanly but every upstream request 403s.** Do not use.
+Don't. Vercel's Node runtime applies a datacenter TLS fingerprint on top of outbound sockets that Cloudflare detects and blocks with `403 Attention Required` — defeating `got-scraping`'s entire reason to exist. An earlier commit had a working Vercel bridge (`api/index.ts` + `vercel.json`) that deployed cleanly but every upstream request 403'd. The files have been removed after confirming the wall is architectural, not configurable; see git history if you need the setup for a non-Cloudflare-fronted source.
 
 ### Other hosts
 

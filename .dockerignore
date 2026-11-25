@@ -15,8 +15,7 @@ tmp
 # tests + files the running image doesn't need
 **/*.test.ts
 README.md
+LICENSE
 userscript
-api
-vercel.json
 # docs source is used only by the docs-build stage; final image copies the
 # already-built bundle, so leaving docs/ in the build context is fine.
