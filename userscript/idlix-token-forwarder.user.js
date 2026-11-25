@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         IDLIX Turnstile Token Forwarder (hono-movie-api)
 // @namespace    hono-movie-api
-// @version      3.0.0
-// @description  Signal-driven Turnstile token forwarder. Renders ONE invisible widget in execute-on-demand mode and solves only when the API's SSE channel asks for a token.
+// @version      3.1.0
+// @description  Signal-driven Turnstile token forwarder. Renders ONE invisible widget in execute-on-demand mode and solves only when the API's long-poll endpoint asks for a token. Uses GM_xmlhttpRequest to bypass IDLIX's strict CSP.
 // @match        https://z3.idlixku.com/*
 // @match        https://*.idlixku.com/*
 // @run-at       document-idle
@@ -42,7 +42,7 @@
 
   const log = (...args) => console.log('[idlix-forwarder]', ...args)
   const TOKENS_URL = API_BASE.replace(/\/$/, '') + '/tokens'
-  const NEEDS_URL = TOKENS_URL + '/needs'
+  const WAIT_URL = TOKENS_URL + '/wait?timeout=25'
 
   // ─── POST a captured token to the API's pool ────────────────────────────
   const send = (token) => {
@@ -185,37 +185,50 @@
     // Startup warm.
     topUp()
 
-    // ─── SSE: solve on demand when API signals a drain ────────────────────
-    // Use the PAGE context EventSource so CORS applies the normal way; the
-    // userscript's isolated world is sandboxed differently in some browsers.
-    const ES = pageWin.EventSource || window.EventSource
-    let es = null
-    let reconnectDelay = 1_000
+    // ─── long-poll loop: solve on demand when API signals a drain ─────────
+    // IDLIX serves a strict CSP that blocks cross-origin EventSource/fetch
+    // from page context. GM_xmlhttpRequest bypasses CSP entirely (uses the
+    // userscript's own @connect directive, NOT the page's connect-src), so
+    // we long-poll /wait instead of subscribing to /needs.
+    let waitBackoff = 1_000
+    let connectedOnce = false
 
-    const connectSSE = () => {
-      try {
-        es = new ES(NEEDS_URL)
-      } catch (e) {
-        log('EventSource construct failed:', e)
-        setTimeout(connectSSE, 5_000)
+    const waitLoop = () => {
+      if (typeof GM_xmlhttpRequest !== 'function') {
+        // No GM API — fall back to a chatty poll of pool size.
+        log('GM_xmlhttpRequest unavailable; falling back to pool-size polling')
+        setInterval(topUp, 5_000)
         return
       }
-      es.addEventListener('hello', () => {
-        log('SSE connected')
-        reconnectDelay = 1_000
+      GM_xmlhttpRequest({
+        method: 'GET',
+        url: WAIT_URL,
+        timeout: 60_000, // > server's 25s so we don't abort the long-poll
+        onload: (r) => {
+          if (r.status === 200) {
+            solveOne()
+          } else if (r.status !== 204) {
+            log('wait unexpected status:', r.status)
+          }
+          if (!connectedOnce) { log('long-poll connected'); connectedOnce = true }
+          waitBackoff = 1_000
+          // Reconnect immediately (no delay) — server already waited up to 25s.
+          waitLoop()
+        },
+        onerror: (e) => {
+          log('wait error, reconnecting in', waitBackoff, 'ms', e)
+          setTimeout(waitLoop, waitBackoff)
+          waitBackoff = Math.min(waitBackoff * 2, 30_000)
+        },
+        ontimeout: () => {
+          // Rare — server replies within 25s. If this fires, network stalled.
+          setTimeout(waitLoop, 1_000)
+        },
       })
-      es.addEventListener('need', () => solveOne())
-      es.addEventListener('ping', () => { /* keepalive, nothing to do */ })
-      es.onerror = () => {
-        log('SSE dropped, reconnecting in', reconnectDelay, 'ms')
-        try { es && es.close() } catch {}
-        setTimeout(connectSSE, reconnectDelay)
-        reconnectDelay = Math.min(reconnectDelay * 2, 30_000)
-      }
     }
-    connectSSE()
+    waitLoop()
 
-    // ─── fallback poll in case SSE goes silent without firing onerror ─────
+    // ─── fallback poll in case the long-poll goes silent ──────────────────
     setInterval(topUp, FALLBACK_POLL_MS)
   }
 

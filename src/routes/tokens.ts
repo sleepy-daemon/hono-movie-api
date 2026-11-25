@@ -36,14 +36,49 @@ app.get('/', async c => {
 })
 
 /**
- * Server-Sent Events channel the userscript subscribes to. The stream handler
- * emits a `need` event each time it pops a token; the userscript responds by
- * solving one fresh token and POSTing it back. Supply follows demand instead
- * of running on a fixed timer.
+ * Long-poll version of /needs for clients that can't open a native EventSource.
+ * The main consumer is the Tampermonkey userscript — IDLIX serves a strict
+ * Content-Security-Policy that blocks cross-origin EventSource, but
+ * GM_xmlhttpRequest bypasses CSP entirely. Semantically identical to the SSE
+ * channel: holds the request open until either a `need` event fires (returns
+ * 200 with { event: 'need' }) or the timeout elapses (returns 204 empty).
+ * Client reconnects immediately and loops.
+ *
+ * Query: ?timeout=<seconds> (1-55, default 25). Keep under Fly's 60s idle
+ * limit and your platform's proxy timeout.
+ */
+app.get('/wait', c => {
+  const requested = Number(c.req.query('timeout') ?? '25')
+  const timeout = Math.min(Math.max(1, Number.isFinite(requested) ? requested : 25), 55) * 1000
+
+  return new Promise<Response>(resolve => {
+    let done = false
+    const finish = (res: Response) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      tokenEvents.off('need', onNeed)
+      c.req.raw.signal.removeEventListener('abort', onAbort)
+      resolve(res)
+    }
+    const onNeed = () => finish(c.json({ event: 'need', ts: Date.now() }))
+    // Client disconnect — response is thrown away, just unregister listeners.
+    const onAbort = () => finish(c.body(null, 204))
+    const timer = setTimeout(() => finish(c.body(null, 204)), timeout)
+    tokenEvents.on('need', onNeed)
+    c.req.raw.signal.addEventListener('abort', onAbort)
+  })
+})
+
+/**
+ * Server-Sent Events channel. Semantically identical to /wait but as a
+ * streaming connection — preferred when the client can open one (direct
+ * curl, server-to-server, any origin without a CSP wall). The userscript
+ * uses /wait instead because IDLIX's CSP blocks EventSource.
  *
  * - `hello` on connect so the client knows the pipe is live.
  * - `ping` every 25s so proxies (Cloudflare, nginx) don't close the stream.
- * - Listener is detached on disconnect to avoid memory leaks.
+ * - Listener detached on disconnect to avoid memory leaks.
  */
 app.get('/needs', c => {
   return streamSSE(c, async stream => {
